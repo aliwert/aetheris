@@ -9,6 +9,7 @@ import (
 type Backend struct {
 	ID          string
 	Address     string // "scheme://host:port"
+	HealthyFlag int32  // atomically updated; 1 = healthy, 0 = unhealthy
 	Weight      int
 	ActiveConns int64 // atomically incremented
 	Healthy     bool
