@@ -1,0 +1,21 @@
+routes:
+  - id: "user-api"
+    path_prefix: "/api/v1/users"
+    methods: ["GET", "POST"]
+    upstream_id: "backend-cluster-1"
+    timeout: 5s
+
+  - id: "payment-api"
+    path_prefix: "/api/v1/payments"
+    upstream_id: "backend-cluster-2"
+    timeout: 10s
+
+  - id: "webhook-events"
+    path_prefix: "/webhook"
+    methods: ["POST"]
+    upstream_id: "event-spooler"
+    timeout: 2s
+
+rate_limit:
+  default_rate: 100
+  default_burst: 200

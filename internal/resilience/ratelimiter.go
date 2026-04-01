@@ -78,3 +78,13 @@ func (rl *RateLimiter) getOrCreate(key string) *tokenBucket {
 	actual, _ := rl.buckets.LoadOrStore(key, newBucket)
 	return actual.(*tokenBucket)
 }
+
+func (rl *RateLimiter) AllowN(ctx context.Context, key string, n int) (bool, int) {
+	bucket := rl.getOrCreate(key)
+	allowed, remaining := bucket.tryConsume(float64(n))
+	return allowed, int(math.Floor(remaining))
+}
+
+func (rl *RateLimiter) Limit(key string) float64 {
+	return rl.cfg.DefaultRate
+}

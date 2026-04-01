@@ -10,6 +10,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/aliwert/aetheris/internal/resilience"
 	api "github.com/aliwert/aetheris/pkg/aetherisapi"
 )
 
@@ -60,11 +61,11 @@ import (
 //	    upstream_id:  event-spooler
 //	    timeout:      5s
 type Config struct {
-	Server    ServerConfig      `yaml:"server"     json:"server"`
-	RateLimit RateLimitConfig   `yaml:"rate_limit" json:"rate_limit"`
-	Upstreams []UpstreamConfig  `yaml:"upstreams" json:"upstreams"`
-	Routes    []api.RouteConfig `yaml:"routes"   json:"routes"`
-	Spooler   SpoolerConfig     `yaml:"spooler"   json:"spooler"`
+	Server    ServerConfig        `yaml:"server"     json:"server"`
+	RateLimit resilience.RLConfig `yaml:"rate_limit" json:"rate_limit"`
+	Upstreams []UpstreamConfig    `yaml:"upstreams" json:"upstreams"`
+	Routes    []api.RouteConfig   `yaml:"routes"   json:"routes"`
+	Spooler   SpoolerConfig       `yaml:"spooler"   json:"spooler"`
 }
 
 type ServerConfig struct {
@@ -101,33 +102,6 @@ func (s ServerConfig) withDefaults() ServerConfig {
 		s.MaxHeaderBytes = 1 << 20 // 1 MiB
 	}
 	return s
-}
-
-// controls the global token-bucket rate limiter.
-type RateLimitConfig struct {
-	Enabled      bool                        `yaml:"enabled" json:"enabled"`
-	DefaultRate  float64                     `yaml:"default_rate" json:"default_rate"`
-	DefaultBurst float64                     `yaml:"default_burst" json:"default_burst"`
-	PerKeyRates  map[string]PerKeyRateConfig `yaml:"per_key_rates" json:"per_key_rates"`
-}
-
-// holds per-key token bucket parameters.
-type PerKeyRateConfig struct {
-	Rate  float64 `yaml:"rate"  json:"rate"`
-	Burst float64 `yaml:"burst" json:"burst"`
-}
-
-func (r RateLimitConfig) withDefaults() RateLimitConfig {
-	if !r.Enabled {
-		r.Enabled = true
-	}
-	if r.DefaultRate <= 0 {
-		r.DefaultRate = 1000
-	}
-	if r.DefaultBurst <= 0 {
-		r.DefaultBurst = 2000
-	}
-	return r
 }
 
 // describes a named pool of backends with a shared load-
@@ -294,7 +268,6 @@ func Load(path string) (*Config, error) {
 	// apply subsystem defaults before validation so validators can
 	// rely on zero-value checks being meaningful
 	cfg.Server = cfg.Server.withDefaults()
-	cfg.RateLimit = cfg.RateLimit.withDefaults()
 	cfg.Spooler = cfg.Spooler.withDefaults()
 	for i := range cfg.Upstreams {
 		cfg.Upstreams[i].CircuitBreaker = cfg.Upstreams[i].CircuitBreaker.withDefaults()
