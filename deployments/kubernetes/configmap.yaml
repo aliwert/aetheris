@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aetheris-config
+  labels:
+    app: aetheris
+data:
+  aetheris.yaml: |
+    server:
+      listen: ":8080"
+      admin: ":9090"
+    rate_limit:
+      enabled: true
+      default_rate: 1000
+      default_burst: 2000
+    upstreams:
+      - id: "dummy-backend"
+        backends:
+          - id: "b1"
+            address: "http://httpbin.org" # test for mock backend
+        load_balancer: round_robin
+    routes:
+      - id: "test-route"
+        path_prefix: "/"
+        upstream_id: "dummy-backend"
+    spooler:
+      buffer_size: 10000
+      worker_count: 5

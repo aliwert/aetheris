@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aetheris
+  labels:
+    app: aetheris
+spec:
+  replicas: 3 # will run at the same time
+  selector:
+    matchLabels:
+      app: aetheris
+  template:
+    metadata:
+      labels:
+        app: aetheris
+    spec:
+      containers:
+        - name: aetheris
+          image: aliwert/aetheris:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: proxy
+              containerPort: 8080
+            - name: admin
+              containerPort: 9090
+
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: admin
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: admin
+            initialDelaySeconds: 3
+            periodSeconds: 10
+
+          # RAM/CPU limits to prevent memory leaks
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+
+          # mounting the ConfigMap as a file inside the pod
+          volumeMounts:
+            - name: config-volume
+              mountPath: /configs
+              readOnly: true
+      volumes:
+        - name: config-volume
+          configMap:
+            name: aetheris-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aetheris-service
+  labels:
+    app: aetheris
+spec:
+  type: ClusterIP
+  selector:
+    app: aetheris
+  ports:
+    - name: proxy
+      port: 80
+      targetPort: proxy
+    - name: admin
+      port: 9090
+      targetPort: admin
